@@ -4,32 +4,38 @@ const stylesList = [
   {
     id: "cinematic",
     title: "Cinematic",
-    prompt: "cinematic lighting, dramatic composition, premium commercial look, high detail",
+    prompt:
+      "cinematic lighting, dramatic composition, premium commercial look, high detail",
   },
   {
     id: "carads",
     title: "Car Ads",
-    prompt: "luxury car advertisement, glossy reflections, bold angles, premium automotive campaign",
+    prompt:
+      "luxury car advertisement, glossy reflections, bold angles, premium automotive campaign",
   },
   {
     id: "luxury",
     title: "Luxury",
-    prompt: "premium luxury aesthetic, elegant lighting, expensive visual style, refined details",
+    prompt:
+      "premium luxury aesthetic, elegant lighting, expensive visual style, refined details",
   },
   {
     id: "street",
     title: "Street",
-    prompt: "urban night atmosphere, street lights, realistic city mood, bold composition",
+    prompt:
+      "urban night atmosphere, street lights, realistic city mood, bold composition",
   },
   {
     id: "viral",
     title: "Viral TikTok",
-    prompt: "viral social media style, eye-catching, trendy, high contrast, scroll-stopping content",
+    prompt:
+      "viral social media style, eye-catching, trendy, high contrast, scroll-stopping content",
   },
   {
     id: "anime",
     title: "Anime",
-    prompt: "anime style, dynamic composition, detailed illustration, vibrant mood",
+    prompt:
+      "anime style, dynamic composition, detailed illustration, vibrant mood",
   },
 ];
 
@@ -41,6 +47,10 @@ export default function App() {
 
   const [uploadedName, setUploadedName] = useState("");
   const [previewImage, setPreviewImage] = useState("");
+
+  const [credits, setCredits] = useState(10);
+  const [history, setHistory] = useState([]);
+
   const fileInputRef = useRef(null);
 
   const activeStyle = useMemo(
@@ -56,6 +66,11 @@ export default function App() {
   const handleGenerate = async () => {
     if (!prompt.trim()) {
       alert("Напиши промт");
+      return;
+    }
+
+    if (credits <= 0) {
+      setResult("Нет кредитов");
       return;
     }
 
@@ -76,15 +91,27 @@ export default function App() {
       const imageUrl = data.data?.[0]?.url;
       const imageBase64 = data.data?.[0]?.b64_json;
 
+      let finalImage = "";
+
       if (imageUrl) {
+        finalImage = imageUrl;
         setResult(imageUrl);
       } else if (imageBase64) {
-        setResult(`data:image/png;base64,${imageBase64}`);
+        finalImage = `data:image/png;base64,${imageBase64}`;
+        setResult(finalImage);
       } else if (data.error?.message) {
         setResult(`Ошибка: ${data.error.message}`);
       } else {
         console.log(data);
         setResult("Ошибка генерации");
+      }
+
+      if (finalImage) {
+        setHistory((prev) => [
+          { img: finalImage, prompt: finalPrompt, style: activeStyle?.title || "" },
+          ...prev
+        ]);
+        setCredits((prev) => prev - 1);
       }
     } catch (err) {
       console.error(err);
@@ -125,11 +152,38 @@ export default function App() {
           "radial-gradient(circle at top, #15121d 0%, #09090c 45%, #050507 100%)",
         color: "#ffffff",
         padding: "28px 18px 60px",
-        fontFamily:
-          "Inter, Arial, Helvetica, sans-serif",
+        fontFamily: "Inter, Arial, Helvetica, sans-serif",
       }}
     >
       <div style={{ maxWidth: "1120px", margin: "0 auto" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "20px",
+            gap: "12px",
+            flexWrap: "wrap"
+          }}
+        >
+          <div style={{ fontWeight: 800, fontSize: "18px", letterSpacing: "-0.02em" }}>
+            KOKOS AI
+          </div>
+
+          <div
+            style={{
+              padding: "8px 14px",
+              borderRadius: "12px",
+              background: "rgba(212,175,55,0.1)",
+              border: "1px solid rgba(212,175,55,0.3)",
+              color: "#f0d77a",
+              fontWeight: 700
+            }}
+          >
+            Credits: {credits}
+          </div>
+        </div>
+
         <section
           style={{
             border: "1px solid rgba(212,175,55,0.16)",
@@ -298,6 +352,16 @@ export default function App() {
                 <button
                   onClick={handleGenerate}
                   disabled={loading}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow =
+                      "0 0 40px rgba(212,175,55,0.6)";
+                    e.currentTarget.style.transform = "translateY(-1px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow =
+                      "0 0 20px rgba(212,175,55,0.3)";
+                    e.currentTarget.style.transform = "translateY(0)";
+                  }}
                   style={{
                     flex: 1,
                     minWidth: "180px",
@@ -310,7 +374,8 @@ export default function App() {
                     fontSize: "16px",
                     fontWeight: 800,
                     cursor: "pointer",
-                    boxShadow: "0 10px 30px rgba(212,175,55,0.2)",
+                    boxShadow: "0 0 20px rgba(212,175,55,0.3)",
+                    transition: "0.3s",
                   }}
                 >
                   {loading ? "Generating..." : "Generate ⚡"}
@@ -378,6 +443,7 @@ export default function App() {
                       border: "1px solid rgba(255,255,255,0.08)",
                       background: "#0b0b10",
                       padding: "14px",
+                      transition: "0.3s",
                     }}
                   >
                     <div
@@ -478,6 +544,7 @@ export default function App() {
                       : "rgba(255,255,255,0.02)",
                     color: "#ffffff",
                     cursor: "pointer",
+                    transition: "0.3s",
                   }}
                 >
                   <div
@@ -560,9 +627,7 @@ export default function App() {
                   lineHeight: 1.7,
                 }}
               >
-                {result
-                  ? result
-                  : "Your generated image will appear here."}
+                {result ? result : "Your generated image will appear here."}
               </div>
             )}
           </div>
@@ -711,6 +776,46 @@ export default function App() {
             </div>
           </div>
         </section>
+
+        {history.length > 0 && (
+          <section style={{ marginTop: "30px" }}>
+            <div
+              style={{
+                color: "#d4af37",
+                marginBottom: "10px",
+                fontSize: "14px",
+                textTransform: "uppercase",
+                letterSpacing: "0.12em",
+              }}
+            >
+              History
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+                gap: "10px"
+              }}
+            >
+              {history.map((item, i) => (
+                <img
+                  key={i}
+                  src={item.img}
+                  alt={item.prompt}
+                  style={{
+                    width: "100%",
+                    borderRadius: "12px",
+                    cursor: "pointer",
+                    transition: "0.3s",
+                    border: "1px solid rgba(255,255,255,0.08)"
+                  }}
+                  onClick={() => setResult(item.img)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );
